@@ -41,27 +41,34 @@ const registerUser =asyncHandler( async(req,res)=>{
         throw new apiError(409,"User already exist")
     }
 
-    const avatarPath=req.files?.avatar[0].path
-    if(!avatarpath){
-        throw apiEroor(400,"Avatar is required")
+    const avatarPath=req.files?.avatar[0]?.path
+    if(!avatarPath){
+        throw new apiEroor(400,"Avatar is required")
     }
+    console.log("avatar path:",avatarPath)
     const avatar=await uploadOnCloudinary(avatarPath) 
     if(!avatar){
-        throw apiError(400,"Avatar is requied")
+        throw new apiError(400,"Avatar is requied")
     }
-    const coverImagePath=req.files?.coverImage[0].path
+    console.log(req.files)
+    // const coverImagePath=req.files?.coverImage[0]?.path
     // if(!coverImagePath){
     //     throw apiEroor(400,"Cover Imgae is required")
     // }
-    const coverImage=await uploadOnCloudinary(coverImagePath)//uploading takes time //coverImage is not required field
+    let coverImage;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length>0)
+    {
+        coverImage=await uploadOnCloudinary(coverImagePath)
+    }
+    // const coverImage=await uploadOnCloudinary(coverImagePath)//uploading takes time //coverImage is not required field
     // if(!coverImage){
     //     throw apiError(400,"Cover Image is requied")
     // }
 
     const newUser=await user.create({
-        fulname,
+        fullname,
         avatar: avatar.url,//cloudinary file return response not URL
-        coverImage:coverImage.url || "",
+        coverImage:coverImage?.url || "",
         email,
         password,
         username:username.toLowerCase()
@@ -69,8 +76,8 @@ const registerUser =asyncHandler( async(req,res)=>{
     const createdUser=await user.findById(newUser._id).select(
         "-password -refreshToken" //we write here what we donot required
     )
-    if(!createdUser){
-        throw apiError(400,"something went wrong whie registering the user")
+    if(!createdUser){ 
+        throw new apiError(400,"something went wrong whie registering the user")
     }
 
     return res.status(201).json(
