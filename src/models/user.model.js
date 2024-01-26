@@ -53,24 +53,25 @@ userSchema.pre("save",async function(next){ //hooks of mongo
 })//as this context is not availale in arrow function
 
 userSchema.methods.isPasswordCorrect=async function(password){
-    return await bcrypt.campare(password,this.password)
+    return await bcrypt.compare(password,this.password)
 }
 
-userSchema.method.generateAccessToken=function(){
-    return jwt.sigh({
+userSchema.methods.generateAccessToken=function(){
+    return jwt.sign({
         _id: this._id,
         email: this.email,
         fullname: this.fullname,
         username: this.username
         },
-        process.env.ACCESS_TOOKEN_SECRET,
+        process.env.ACCESS_TOKEN_SECRET,
         {
             expiresIn:process.env.ACCESS_TOKEN_EXPIRY,
         }
     )
 }
-userSchema.method.generateRefreshToken=function(){
-    return jwt.sigh({
+userSchema.methods.generateRefreshToken=function(){
+    // console.log("I am called")
+    return jwt.sign({
         _id: this._id,
         },
         process.env.REFRESH_TOKEN_SECRET,

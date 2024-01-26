@@ -6,16 +6,18 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
 const generateAccessTokenRefreshToken=async(userId)=>{
     try{
-        const User=user.findById(userId)
-        const accessToken=await User.generateAccessToken
-        const refreshToken=await User.generateRefreshToken
-        User.refreshToken=refreshToken
-        await user.save({validateBeforeSave:false})//as now if we save password and other also required filed so to remove validation
+        console.log(userId)
+        const User=await user.findById(userId)
+        console.log(User)
+        const accessToken=await User.generateAccessToken()
+        const refreshToken=await User.generateRefreshToken()
+        // User.refreshToken=refreshToken
+        await User.save({validateBeforeSave:false})//as now if we save password and other also required filed so to remove validation
     
         return {accessToken,refreshToken}
 
-    }catch(errror){
-        throw new apiError(400,"something went wrong in creating tokens")
+    }catch(error){
+        throw new apiError(400,error)
     }
 }
 
@@ -45,7 +47,7 @@ const registerUser =asyncHandler( async(req,res)=>{
     // }
 
     if([fullname,email,username,password].some((field)=>field?.trim()==="")){
-        throw new apiError(400,"Allfields required")
+        throw new apiError(400,"All fields required")
     }
 
     const existingUser=await user.findOne({
@@ -73,7 +75,7 @@ const registerUser =asyncHandler( async(req,res)=>{
     let coverImage;
     if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length>0)
     {
-        coverImage=await uploadOnCloudinary(coverImagePath)
+        coverImage=await uploadOnCloudinary(req.files.coverImage[0].path)
     }
     // const coverImage=await uploadOnCloudinary(coverImagePath)//uploading takes time //coverImage is not required field
     // if(!coverImage){
@@ -100,7 +102,7 @@ const registerUser =asyncHandler( async(req,res)=>{
     )
 })
 
-const logginUser =asyncHandler( async(req,res)=>{
+const logInUser =asyncHandler( async(req,res)=>{
     //req body->data
     //username or email
     //find the user
@@ -108,7 +110,9 @@ const logginUser =asyncHandler( async(req,res)=>{
     //access and refresh token
     //send cookie
     const {email,username,password}=req.body;
-    if(!email || !username)
+    console.log("body",req.body)
+    // if(!email || !username)
+    if(!(email||username))
     {
         throw new apiError(400,"email or username required")
     }
@@ -119,7 +123,7 @@ const logginUser =asyncHandler( async(req,res)=>{
     {
         throw new apiError(404,"Invalid Email Id or Password")
     }
-    const isPasswordCorrect=await user.isPasswordCorrect(password)
+    const isPasswordCorrect=await User.isPasswordCorrect(password)
     if(!isPasswordCorrect)
     {
         throw new apiError(401,"Invalid User Credentials")
@@ -171,6 +175,6 @@ const logOutUser=asyncHandler(async(req,res)=>{
 
 export {
     registerUser,
-    logginUser,
+    logInUser,
     logOutUser
 }
