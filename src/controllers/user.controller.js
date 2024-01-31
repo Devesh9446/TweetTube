@@ -4,6 +4,7 @@ import {apiResponse} from "../utils/apiResponse.js"
 import {user} from "../models/user.model.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import jwt from 'jsonwebtoken'
+import { subscription } from '../models/subscription.model.js'
 
 const generateAccessTokenRefreshToken=async(userId)=>{
     try{
@@ -320,6 +321,76 @@ const updateCoverImage=asyncHandler(async(req,res)=>{
 
 })
 
+const getUserChannelProfile = asyncHnadler(async(req,res)=>{
+    const {username} =req.params
+
+    if(!username?.trim()){
+        throw new apiError(400,"Username required")
+    }
+
+    const channel = await user.aggregate([
+        {
+            $match:{
+                username:username?.toLowerCase()
+            }
+        },
+        {
+            //we are seaching for those who  have id of username and chanel same
+            $lookup:{
+                from:"subscriptions",      //data base already make plural everything->whicch data base I have to look
+                localField:"_id",          //name in our data base->it is the id of username
+                foreignField:"channel",    //name in subscription database
+                as:"subscribers"           //by which name we have to store in our data base
+            }
+        },
+        {
+            $lookup:{
+                from:"subscriptions",
+                localField:"_id",
+                foreignField:"subscriber",
+                as:"subscribedTo"
+            }
+        },
+        {
+            //it add more fields accect that of those which are in user
+            $addFields:{
+                subscriberCount:{
+                    $size:"$subscribers"
+                },
+                subscribedToCount:{
+                    $size:"$subscribedTo"    //$ tells we have to select from fields
+                },
+                isSubscribed:{
+                    $cond:{
+                        if:{$in:[req.user?._id,"$subscribers.subscriber"]},    //find id in subscribers.subscriber field
+                        then:true,
+                        else:false
+                    }
+                }
+            }
+        },
+        {
+            //it allows us to select what are the things we want to show
+            $project:{
+                fullname:1,
+                username:1,
+                subscribersCount:1,
+                subscribedToCount:1,
+                isSubscribed:1,
+                avatar:1,
+                coverImage:1,
+                email:1,
+            }
+        }
+    ])
+    //now selection from channel and what we have to show to channel done \
+
+    if(!channel)
+    {
+        throw new apiError(400,"channel does not exists")
+    }
+})
+
 export {
     registerUser,
     logInUser,
@@ -329,5 +400,6 @@ export {
     getCurrentUser,
     updatAccountDetails,
     updateUserAvatar,
-    updateCoverImage
+    updateCoverImage,
+    getUserChannelProfile
 }
