@@ -229,11 +229,11 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
     }
     User.password=newPassword
     await User.save({validationBeforeSave:false})
-    res.status(200).json(new apiResponse(200,{},"password Updated successfully"))
+    return res.status(200).json(new apiResponse(200,{},"password Updated successfully"))
 })
 
 const getCurrentUser = asyncHandler(async(req,res)=>{
-    res.status(200).json(new apiResponse(200,req.user,"Current user fetched successfully"))
+    return res.status(200).json(new apiResponse(200,req.user,"Current user fetched successfully"))
 })
 
 const updatAccountDetails= asyncHandler(async(req,res)=>{
@@ -286,7 +286,7 @@ const updateUserAvatar=asyncHandler(async(req,res)=>{
         }
     ).select("-password")
 
-    req.status(200).json(new apiResponse(200,User,"avatar updated successfully"))
+    return res.status(200).json(new apiResponse(200,User,"avatar updated successfully"))
     
 })
 
@@ -317,7 +317,7 @@ const updateCoverImage=asyncHandler(async(req,res)=>{
         }
     ).select("-password")
 
-    req.status(200).json(new apiResponse(200,User,"CoverImage updated successfully"))
+    return res.status(200).json(new apiResponse(200,User,"CoverImage updated successfully"))
 
 })
 
@@ -387,8 +387,55 @@ const getUserChannelProfile = asyncHnadler(async(req,res)=>{
 
     if(!channel)
     {
-        throw new apiError(400,"channel does not exists")
+        throw new apiError(404,"channel does not exists")
     }
+
+    return res.status(200).json(new apiResponse(200,channel[0],"user fetched successfully"))
+})
+
+const getWatchHistory = asyncHandler(async(req,res)=>{
+    const User=await user.aggregate([
+        {
+            $match:{
+                _id: new mongoose.Types.ObjectId(req.user?._id)             //created an object Id as mongoose haas object Id of format objectId(string)-> in rest mongoose done it by itselt but not here
+            }
+        },
+        {
+            $lookup:{
+                from:"videos",
+                localField:"watchHistory",
+                foreignField:"_id",
+                as:"watchHstory",
+                pipeline:[
+                    {
+                        $lookup:{
+                            from:"owner",
+                            localField:"owner",
+                            foreignField:"_id",
+                            as:"owner",
+                            pipeline:[
+                                {
+                                    $project:{
+                                        fullname:1,
+                                        username:1,
+                                        avatar:1
+                                    }
+                                }
+                            ]
+                        },
+                        $addFields:{
+                            owner:{
+                                $first:"$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        
+    ])
+    
+    return res.status(200).json(new apiResponse(200,User[0].WatchHistory,"watched history fetched successfully"))
 })
 
 export {
@@ -401,5 +448,6 @@ export {
     updatAccountDetails,
     updateUserAvatar,
     updateCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 }
